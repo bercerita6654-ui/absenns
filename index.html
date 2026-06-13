@@ -171,18 +171,18 @@
         </div>
     </div>
 
-    <!-- CUSTOM DELETE PROMPT MODAL -->
-    <div id="customDeleteModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm items-center justify-center p-4 z-50">
+    <!-- CUSTOM AUTH PROMPT MODAL -->
+    <div id="customAuthModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm items-center justify-center p-4 z-50">
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-zoom-in p-6">
-            <div class="flex items-center gap-3 mb-4 text-red-600">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
-                <h3 class="text-lg font-bold text-gray-800">Otorisasi Hapus</h3>
+            <div id="authModalHeader" class="flex items-center gap-3 mb-4 text-gray-800">
+                <svg id="authIcon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                <h3 id="authModalTitle" class="text-lg font-bold">Otorisasi</h3>
             </div>
-            <p id="deleteMessage" class="text-sm text-gray-600 mb-4"></p>
-            <input type="password" id="deletePasswordInput" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg mb-5 outline-none focus:ring-2 focus:ring-red-500" placeholder="Masukkan password (0000)">
+            <p id="authMessage" class="text-sm text-gray-600 mb-4"></p>
+            <input type="password" id="authPasswordInput" class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg mb-5 outline-none focus:ring-2" placeholder="Masukkan password otorisasi">
             <div class="flex gap-3">
-                <button onclick="closeDeleteModal()" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium">Batal</button>
-                <button onclick="confirmDelete()" class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium">Hapus Data</button>
+                <button onclick="closeAuthModal()" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium">Batal</button>
+                <button id="btnConfirmAuth" onclick="confirmAuth()" class="flex-1 px-4 py-2 text-white rounded-lg transition-colors font-medium">Lanjutkan</button>
             </div>
         </div>
     </div>
@@ -246,10 +246,12 @@
         let schedules = {}; 
         let selectedDate = null;
         let currentShift = "Pagi";
-        let targetDelete = null; // Menyimpan data yang akan dihapus
+        let authAction = null; // Menyimpan aksi yang membutuhkan otorisasi (edit/delete)
+        let authTarget = null; // Menyimpan data target otorisasi
+        let editingTarget = null; // Menyimpan data yang sedang diedit
         
         // Default URL Web App
-        const defaultGasUrl = "https://script.google.com/macros/s/AKfycbz--Zyh01-MUVNEpQjb2IK-hEX_0f6NK24BRT--94eWIQe66SZSEvJAHCmSYVNQwMx-/exec";
+        const defaultGasUrl = "https://script.google.com/macros/s/AKfycbyHj7QhrnZBlV64ikNICuwc0ccyUcSRakt45AF909CCJoXcKL6nZJ_8cK04rXh-OT4B/exec";
         let gasUrl = localStorage.getItem('gas_url') || defaultGasUrl;
 
         // --- DOM ELEMENTS ---
@@ -266,9 +268,9 @@
         // Elements Custom Modal
         const customAlertModal = document.getElementById('customAlertModal');
         const alertMessage = document.getElementById('alertMessage');
-        const customDeleteModal = document.getElementById('customDeleteModal');
-        const deleteMessage = document.getElementById('deleteMessage');
-        const deletePasswordInput = document.getElementById('deletePasswordInput');
+        const customAuthModal = document.getElementById('customAuthModal');
+        const authMessage = document.getElementById('authMessage');
+        const authPasswordInput = document.getElementById('authPasswordInput');
 
         // Init setup
         gasUrlInput.value = gasUrl;
@@ -288,21 +290,43 @@
             customAlertModal.classList.remove('flex');
         }
 
-        function openDeleteModal(dateStr, id, nama, shift) {
-            targetDelete = { dateStr, id, nama, shift };
-            deleteMessage.innerHTML = `Anda akan menghapus jadwal piket atas nama <b>${nama}</b> pada tanggal <b>${dateStr}</b>.`;
-            deletePasswordInput.value = "";
-            customDeleteModal.classList.remove('hidden');
-            customDeleteModal.classList.add('flex');
+        function openAuthModal(action, dateStr, id, nama, shift) {
+            authAction = action;
+            authTarget = { dateStr, id, nama, shift };
+            
+            const titleEl = document.getElementById('authModalTitle');
+            const headerEl = document.getElementById('authModalHeader');
+            const btnEl = document.getElementById('btnConfirmAuth');
+
+            if (action === 'delete') {
+                titleEl.innerText = "Otorisasi Hapus";
+                headerEl.className = "flex items-center gap-3 mb-4 text-red-600";
+                authMessage.innerHTML = `Anda akan menghapus jadwal piket atas nama <b>${nama}</b> pada tanggal <b>${dateStr}</b>.`;
+                btnEl.className = "flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium";
+                btnEl.innerText = "Hapus Data";
+                authPasswordInput.className = "w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg mb-5 outline-none focus:ring-2 focus:ring-red-500";
+            } else if (action === 'edit') {
+                titleEl.innerText = "Otorisasi Edit";
+                headerEl.className = "flex items-center gap-3 mb-4 text-blue-600";
+                authMessage.innerHTML = `Anda akan mengubah jadwal piket atas nama <b>${nama}</b> pada tanggal <b>${dateStr}</b>.`;
+                btnEl.className = "flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium";
+                btnEl.innerText = "Lanjutkan Edit";
+                authPasswordInput.className = "w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg mb-5 outline-none focus:ring-2 focus:ring-blue-500";
+            }
+
+            authPasswordInput.value = "";
+            customAuthModal.classList.remove('hidden');
+            customAuthModal.classList.add('flex');
             
             // Auto focus ke input password
-            setTimeout(() => deletePasswordInput.focus(), 100);
+            setTimeout(() => authPasswordInput.focus(), 100);
         }
 
-        function closeDeleteModal() {
-            customDeleteModal.classList.add('hidden');
-            customDeleteModal.classList.remove('flex');
-            targetDelete = null;
+        function closeAuthModal() {
+            customAuthModal.classList.add('hidden');
+            customAuthModal.classList.remove('flex');
+            authAction = null;
+            authTarget = null;
         }
 
         // FUNGSI TARIK DATA JADWAL
@@ -425,11 +449,13 @@
             });
         }
 
+        // FUNGSI MEMBUKA MODAL TAMBAH DATA BARU
         function openModal(day) {
             const year = currentDate.getFullYear();
             const month = currentDate.getMonth() + 1;
             selectedDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
             
+            editingTarget = null; // Menandakan bahwa ini tambah data (bukan edit)
             modalDateText.innerText = selectedDate;
             formNama.value = "";
             formKeterangan.value = "";
@@ -439,49 +465,77 @@
             scheduleModal.classList.add('flex');
         }
 
+        // FUNGSI MEMBUKA MODAL UNTUK EDIT DATA
+        function openEditModal(dateStr, id) {
+            const schedule = schedules[dateStr].find(s => s.id === id);
+            if (!schedule) return;
+
+            editingTarget = { 
+                dateStr: dateStr, 
+                id: id, 
+                oldNama: schedule.nama, 
+                oldShift: schedule.shift 
+            };
+            
+            selectedDate = dateStr;
+            modalDateText.innerText = selectedDate + " (Edit)";
+            formNama.value = schedule.nama;
+            formKeterangan.value = schedule.keterangan || "";
+            setShift(schedule.shift);
+
+            scheduleModal.classList.remove('hidden');
+            scheduleModal.classList.add('flex');
+        }
+
         function closeModal() {
             scheduleModal.classList.add('hidden');
             scheduleModal.classList.remove('flex');
+            editingTarget = null;
         }
 
-        // FUNGSI KONFIRMASI HAPUS (MENGGANTIKAN NATIVE PROMPT)
-        async function confirmDelete() {
-            if (!targetDelete) return;
+        // FUNGSI KONFIRMASI OTORISASI (MENGGANTIKAN NATIVE PROMPT)
+        async function confirmAuth() {
+            if (!authTarget || !authAction) return;
 
-            const pwd = deletePasswordInput.value;
+            const pwd = authPasswordInput.value;
             
             if (pwd !== "0000") {
                 showCustomAlert("Password Salah! Otorisasi ditolak.");
                 return;
             }
 
-            const { dateStr, id, nama, shift } = targetDelete;
-            closeDeleteModal(); // Tutup modal password
+            const { dateStr, id, nama, shift } = authTarget;
+            const currentAction = authAction;
+            closeAuthModal(); // Tutup modal password
 
-            // 1. Hapus secara lokal
-            if (schedules[dateStr]) {
-                schedules[dateStr] = schedules[dateStr].filter(s => s.id !== id);
-                renderCalendar(); 
-            }
+            if (currentAction === 'edit') {
+                openEditModal(dateStr, id);
+            } else if (currentAction === 'delete') {
+                // 1. Hapus secara lokal
+                if (schedules[dateStr]) {
+                    schedules[dateStr] = schedules[dateStr].filter(s => s.id !== id);
+                    renderCalendar(); 
+                }
 
-            // 2. Kirim perintah hapus ke Google Sheet
-            if (gasUrl) {
-                try {
-                    const payload = {
-                        action: "delete",
-                        tanggal: dateStr,
-                        nama: nama,
-                        shift: shift
-                    };
+                // 2. Kirim perintah hapus ke Google Sheet
+                if (gasUrl) {
+                    try {
+                        const payload = {
+                            action: "delete",
+                            tanggal: dateStr,
+                            nama: nama,
+                            shift: shift
+                        };
 
-                    await fetch(gasUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                        body: JSON.stringify(payload)
-                    });
-                } catch (error) {
-                    console.error("Gagal menghapus dari sheet:", error);
-                    showCustomAlert("Data dihapus secara lokal, namun gagal dihapus dari Google Sheet. Periksa koneksi.");
+                        await fetch(gasUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                            body: JSON.stringify(payload)
+                        });
+                    } catch (error) {
+                        console.error("Gagal menghapus dari sheet:", error);
+                        showCustomAlert("Data dihapus secara lokal, namun gagal dihapus dari Google Sheet. Periksa koneksi.");
+                    }
                 }
             }
         }
@@ -525,7 +579,7 @@
                     }">${holiday.name}</div>
                 `).join('');
 
-                // Tombol Hapus memanggil openDeleteModal
+                // Tombol Edit dan Hapus
                 let schedulesHTML = daySchedules.map(schedule => {
                     let dotColor = 'bg-gray-400';
                     if (schedule.shift === 'Pagi') dotColor = 'bg-orange-400';
@@ -537,15 +591,22 @@
 
                     return `
                     <div class="text-xs p-1.5 rounded bg-blue-50 border border-blue-100 flex flex-col mt-1 relative group">
-                        <span class="font-semibold text-blue-800 pr-5">${schedule.nama}</span>
+                        <span class="font-semibold text-blue-800 pr-12">${schedule.nama}</span>
                         <span class="text-blue-600 flex items-center gap-1">
                             <span class="w-2 h-2 rounded-full ${dotColor}"></span>
                             ${schedule.shift}
                         </span>
                         ${ketHTML}
-                        <button onclick="event.stopPropagation(); openDeleteModal('${dateStr}', ${schedule.id}, '${schedule.nama}', '${schedule.shift}')" class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 text-red-500 hover:bg-red-100 bg-white rounded p-1 shadow-sm transition-opacity" title="Hapus Jadwal">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
-                        </button>
+                        <div class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 flex gap-1 transition-opacity">
+                            <!-- Tombol Edit -->
+                            <button onclick="event.stopPropagation(); openAuthModal('edit', '${dateStr}', ${schedule.id}, '${schedule.nama}', '${schedule.shift}')" class="text-blue-500 hover:bg-blue-100 bg-white rounded p-1 shadow-sm" title="Edit Jadwal">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+                            </button>
+                            <!-- Tombol Hapus -->
+                            <button onclick="event.stopPropagation(); openAuthModal('delete', '${dateStr}', ${schedule.id}, '${schedule.nama}', '${schedule.shift}')" class="text-red-500 hover:bg-red-100 bg-white rounded p-1 shadow-sm" title="Hapus Jadwal">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                            </button>
+                        </div>
                     </div>`;
                 }).join('');
 
@@ -571,7 +632,7 @@
             calendarGrid.innerHTML = gridHTML;
         }
 
-        // --- FORM SUBMIT EVENT (TAMBAH DATA) ---
+        // --- FORM SUBMIT EVENT (TAMBAH DATA ATAU EDIT DATA) ---
         document.getElementById('scheduleForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -582,37 +643,77 @@
             btnSubmit.disabled = true;
             btnSubmit.innerHTML = `<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Menyimpan...`;
 
-            const newSchedule = { 
-                id: Date.now(), 
-                nama: nama, 
-                shift: currentShift, 
-                keterangan: keterangan 
-            };
-
-            if (!schedules[selectedDate]) schedules[selectedDate] = [];
-            schedules[selectedDate].push(newSchedule);
-
-            if (gasUrl) {
-                try {
-                    const payload = {
-                        action: "add",
-                        tanggal: selectedDate,
+            if (editingTarget) {
+                // ---- MODE EDIT DATA ----
+                // 1. Update data secara lokal di layar
+                const index = schedules[selectedDate].findIndex(s => s.id === editingTarget.id);
+                if (index !== -1) {
+                    schedules[selectedDate][index] = {
+                        id: editingTarget.id,
                         nama: nama,
                         shift: currentShift,
                         keterangan: keterangan
                     };
+                }
 
-                    await fetch(gasUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                        body: JSON.stringify(payload)
-                    });
-                } catch (error) {
-                    console.error("Gagal mengirim ke Google Sheets:", error);
-                    showCustomAlert("Data tersimpan di kalender ini, namun gagal dikirim ke Google Sheets.");
+                // 2. Kirim payload EDIT ke Google Sheets
+                if (gasUrl) {
+                    try {
+                        const payload = {
+                            action: "edit",
+                            tanggal: selectedDate,
+                            oldNama: editingTarget.oldNama,
+                            oldShift: editingTarget.oldShift,
+                            newNama: nama,
+                            newShift: currentShift,
+                            newKeterangan: keterangan
+                        };
+
+                        await fetch(gasUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                            body: JSON.stringify(payload)
+                        });
+                    } catch (error) {
+                        console.error("Gagal mengedit di Google Sheets:", error);
+                        showCustomAlert("Perubahan tersimpan lokal, namun gagal terhubung ke Google Sheets.");
+                    }
+                }
+            } else {
+                // ---- MODE TAMBAH DATA (ADD) ----
+                const newSchedule = { 
+                    id: Date.now(), 
+                    nama: nama, 
+                    shift: currentShift, 
+                    keterangan: keterangan 
+                };
+
+                if (!schedules[selectedDate]) schedules[selectedDate] = [];
+                schedules[selectedDate].push(newSchedule);
+
+                if (gasUrl) {
+                    try {
+                        const payload = {
+                            action: "add",
+                            tanggal: selectedDate,
+                            nama: nama,
+                            shift: currentShift,
+                            keterangan: keterangan
+                        };
+
+                        await fetch(gasUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                            body: JSON.stringify(payload)
+                        });
+                    } catch (error) {
+                        console.error("Gagal mengirim ke Google Sheets:", error);
+                        showCustomAlert("Data tersimpan di kalender ini, namun gagal dikirim ke Google Sheets.");
+                    }
                 }
             }
 
+            // Kembalikan status tombol ke awal
             btnSubmit.disabled = false;
             btnSubmit.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg> Simpan Data`;
             
