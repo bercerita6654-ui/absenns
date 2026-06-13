@@ -140,10 +140,11 @@
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Shift</label>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
                         <button type="button" onclick="setShift('Pagi')" data-shift="Pagi" class="shift-btn py-2 rounded-lg border text-sm font-medium transition-all bg-blue-50 border-blue-500 text-blue-700 ring-1 ring-blue-500">Pagi</button>
                         <button type="button" onclick="setShift('Siang')" data-shift="Siang" class="shift-btn py-2 rounded-lg border text-sm font-medium transition-all bg-white border-gray-200 text-gray-600 hover:bg-gray-50">Siang</button>
                         <button type="button" onclick="setShift('Malam')" data-shift="Malam" class="shift-btn py-2 rounded-lg border text-sm font-medium transition-all bg-white border-gray-200 text-gray-600 hover:bg-gray-50">Malam</button>
+                        <button type="button" onclick="setShift('Piket')" data-shift="Piket" class="shift-btn py-2 rounded-lg border text-sm font-medium transition-all bg-white border-gray-200 text-gray-600 hover:bg-gray-50">Piket</button>
                         <button type="button" onclick="setShift('Cuti/Izin')" data-shift="Cuti/Izin" class="shift-btn py-2 rounded-lg border text-sm font-medium transition-all bg-white border-gray-200 text-gray-600 hover:bg-gray-50">Cuti/Izin</button>
                     </div>
                 </div>
@@ -585,6 +586,7 @@
                     if (schedule.shift === 'Pagi') dotColor = 'bg-orange-400';
                     else if (schedule.shift === 'Siang') dotColor = 'bg-yellow-400';
                     else if (schedule.shift === 'Malam') dotColor = 'bg-indigo-400';
+                    else if (schedule.shift === 'Piket') dotColor = 'bg-green-500';
                     else if (schedule.shift === 'Cuti/Izin') dotColor = 'bg-red-500';
 
                     let ketHTML = schedule.keterangan ? `<div class="text-[10px] text-gray-500 mt-1 italic leading-tight break-words border-t border-blue-100 pt-1">${schedule.keterangan}</div>` : '';
