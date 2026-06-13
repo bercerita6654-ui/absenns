@@ -197,8 +197,8 @@
             "2026-05-31": [{ name: "Hari Raya Waisak", type: "nasional" }],
             "2026-06-01": [{ name: "Hari Lahir Pancasila", type: "nasional" }],
             "2026-06-17": [{ name: "Hari Raya Galungan", type: "bali" }],
+            "2026-06-27": [{ name: "Hari Raya Kuningan", type: "bali" }],
             "2026-08-17": [{ name: "Hari Kemerdekaan RI", type: "nasional" }],
-            "2026-12-25": [{ name: "Hari Raya Natal", type: "nasional" }],
             "2026-05-20": [{ name: "Hari Raya Galungan", type: "bali" }],
             "2026-05-30": [{ name: "Hari Raya Kuningan", type: "bali" }],
             "2026-07-04": [{ name: "Hari Raya Saraswati", type: "bali" }],
@@ -234,8 +234,83 @@
         gasUrlInput.value = gasUrl;
         renderCalendar();
         fetchAdminNames();
+        fetchSchedulesData(); // <--- BARU: Memanggil data saat aplikasi dimuat/direfresh
 
         // --- FUNCTIONS ---
+
+        // FUNGSI TARIK DATA JADWAL (BARU)
+        async function fetchSchedulesData() {
+            const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ8ACyi03DJ77mANO19x_hJV82Xs8rNBBLyT9IIGc1tgYGNrv9WMufjm940iEPx4QU6Eta6T8Ekv2-X/pub?gid=1592468045&single=true&output=csv";
+            
+            try {
+                const response = await fetch(csvUrl);
+                const csvText = await response.text();
+                
+                // Memisahkan text per baris
+                const rows = csvText.split(/\r?\n/).filter(row => row.trim().length > 0);
+                
+                // Melewati baris header jika ada
+                if (rows.length > 0 && rows[0].toLowerCase().includes('timestamp')) {
+                    rows.shift(); 
+                }
+
+                schedules = {}; // Mereset data lokal sebelum diisi dengan data dari server
+
+                rows.forEach((row, index) => {
+                    // Parsing CSV (menghindari error jika ada teks berkomentar/koma di dalam deskripsi)
+                    let cols = [];
+                    let inQuotes = false;
+                    let current = "";
+                    for(let i = 0; i < row.length; i++) {
+                        if(row[i] === '"') inQuotes = !inQuotes;
+                        else if(row[i] === ',' && !inQuotes) { cols.push(current.trim()); current = ""; }
+                        else current += row[i];
+                    }
+                    cols.push(current.trim());
+
+                    // Memastikan data valid (minimal memiliki sampai kolom Shift)
+                    if (cols.length >= 4) {
+                        let tanggal = cols[1];
+                        
+                        // Normalisasi Format Tanggal dari Sheet (Jika dikonversi menjadi DD/MM/YYYY atau M/D/YYYY)
+                        if (tanggal.includes('/')) {
+                            const p = tanggal.split('/');
+                            if (p.length === 3) {
+                                let year = p[2];
+                                let month = p[1];
+                                let day = p[0];
+                                
+                                // Deteksi format US (M/D/YYYY) vs Indonesia (DD/MM/YYYY)
+                                if (parseInt(day) <= 12 && parseInt(month) > 12) {
+                                    month = p[0];
+                                    day = p[1];
+                                }
+                                tanggal = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                            }
+                        }
+
+                        const nama = cols[2];
+                        const shift = cols[3];
+                        const keterangan = cols[4] ? cols[4].replace(/^"|"$/g, '') : "";
+
+                        if (!schedules[tanggal]) schedules[tanggal] = [];
+                        
+                        schedules[tanggal].push({
+                            id: Date.now() + index, // Generate ID buatan untuk keperluan hapus local
+                            nama: nama,
+                            shift: shift,
+                            keterangan: keterangan
+                        });
+                    }
+                });
+
+                // Perbarui tampilan kalender setelah semua data masuk
+                renderCalendar(); 
+            } catch (error) {
+                console.error("Gagal memuat rekap jadwal dari Google Sheets:", error);
+            }
+        }
+
         async function fetchAdminNames() {
             const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ8ACyi03DJ77mANO19x_hJV82Xs8rNBBLyT9IIGc1tgYGNrv9WMufjm940iEPx4QU6Eta6T8Ekv2-X/pub?gid=219192679&single=true&output=csv";
             const selectElement = document.getElementById('formNama');
