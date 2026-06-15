@@ -479,6 +479,9 @@
                 selectElement.innerHTML = '<option value="" disabled selected>Pilih nama petugas...</option>';
                 let filterOptions = '<option value="All">Semua Admin</option>';
                 
+                // Tambahkan fitur sortir untuk khusus hari libur/toko tutup
+                filterOptions += `<option value="TOKO TUTUP">-- TOKO TUTUP --</option>`;
+                
                 rows.forEach(row => {
                     const cleanName = row.split(',')[0].replace(/['"]/g, '').trim();
                     if(cleanName) {
@@ -626,10 +629,11 @@
 
             selectedDate = dateStr;
             modalDateText.innerText = selectedDate + " (Edit)";
+            
+            // Set values before applying updateShiftUI to avoid losing "TOKO TUTUP" context
+            updateShiftUI(schedule.shift, schedule.lokasi || "");
             formNama.value = schedule.nama;
             formKeterangan.value = schedule.keterangan || "";
-            
-            updateShiftUI(schedule.shift, schedule.lokasi || "");
 
             scheduleModal.classList.remove('hidden');
             scheduleModal.classList.add('flex');
@@ -888,15 +892,23 @@
                 }
             } else {
                 // ---- MODE TAMBAH BANYAK DATA (BULK ADD) ----
+                
+                // Mendorong input terakhir (atau LIBUR) jika belum ditambahkan ke daftar list.
+                if (nama && nama !== "Memuat data admin...") {
+                    tempSchedules.push({
+                        tanggal: selectedDate,
+                        nama: nama,
+                        shift: currentShift,
+                        lokasi: currentLokasi,
+                        keterangan: keterangan
+                    });
+                }
+                
+                // Jika masih kosong (belum diisi apapun)
                 if (tempSchedules.length === 0) {
-                    // Coba masukkan yang ada di form saat ini jika pengguna lupa klik Tambah
-                    if (nama && nama !== "Memuat data admin..." && nama !== "") {
-                        document.getElementById('scheduleForm').dispatchEvent(new Event('submit'));
-                    } else {
-                        showCustomAlert("Tidak ada data petugas yang ditambahkan. Silakan isi form dan klik '+ Tambah ke Daftar'.");
-                        btnSubmitAll.disabled = false; btnSubmitText.innerText = "Simpan Semua Data";
-                        return;
-                    }
+                    showCustomAlert("Tidak ada data petugas yang ditambahkan. Silakan isi form terlebih dahulu.");
+                    btnSubmitAll.disabled = false; btnSubmitText.innerText = "Simpan Semua Data";
+                    return;
                 }
 
                 // Tambahkan semua di tempSchedules ke lokal
