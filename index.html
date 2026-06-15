@@ -117,8 +117,9 @@
 
     <!-- Modal Form Input -->
     <div id="scheduleModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm items-center justify-center p-4 z-40">
-        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-zoom-in">
-            <div class="flex justify-between items-center p-5 border-b border-gray-100">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden animate-zoom-in">
+            <!-- Header Modal -->
+            <div class="flex justify-between items-center p-5 border-b border-gray-100 flex-shrink-0">
                 <h2 class="text-lg font-bold text-gray-800">
                     Input Piket: <span id="modalDateText" class="text-blue-600"></span>
                 </h2>
@@ -127,59 +128,80 @@
                 </button>
             </div>
             
-            <form id="scheduleForm" class="p-5 space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Nama Petugas</label>
-                    <select 
-                        id="formNama"
-                        required
-                        class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all"
-                    >
-                        <option value="" disabled selected>Memuat data admin...</option>
-                    </select>
+            <!-- Konten Modal yang Bisa Di-scroll -->
+            <div class="p-5 overflow-y-auto flex-1 space-y-5 bg-gray-50">
+                
+                <!-- Daftar Penambahan Sementara (Bulk Add) -->
+                <div id="tempScheduleSection" class="hidden space-y-2">
+                    <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wider">Daftar Penambahan</h3>
+                    <div id="tempScheduleList" class="space-y-2 max-h-40 overflow-y-auto pr-1">
+                        <!-- Javascript mengisi daftar disini -->
+                    </div>
                 </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Shift</label>
-                    <div class="grid grid-cols-3 gap-2">
-                        <button type="button" onclick="handleShiftClick('Pagi')" data-shift="Pagi" class="shift-btn py-2 rounded-lg border text-sm font-medium transition-all bg-blue-50 border-blue-500 text-blue-700 ring-1 ring-blue-500">Pagi</button>
-                        <button type="button" onclick="handleShiftClick('Siang')" data-shift="Siang" class="shift-btn py-2 rounded-lg border text-sm font-medium transition-all bg-white border-gray-200 text-gray-600 hover:bg-gray-50">Siang</button>
-                        <button type="button" onclick="handleShiftClick('Malam')" data-shift="Malam" class="shift-btn py-2 rounded-lg border text-sm font-medium transition-all bg-white border-gray-200 text-gray-600 hover:bg-gray-50">Malam</button>
-                        <button type="button" onclick="handleShiftClick('Piket')" data-shift="Piket" class="shift-btn py-2 rounded-lg border text-sm font-medium transition-all bg-white border-gray-200 text-gray-600 hover:bg-gray-50">Piket</button>
-                        <button type="button" onclick="handleShiftClick('Cuti/Izin')" data-shift="Cuti/Izin" class="shift-btn py-2 rounded-lg border text-sm font-medium transition-all bg-white border-gray-200 text-gray-600 hover:bg-gray-50">Cuti/Izin</button>
-                        <button type="button" onclick="handleShiftClick('LIBUR')" data-shift="LIBUR" class="shift-btn py-2 rounded-lg border text-sm font-medium transition-all bg-white border-gray-200 text-gray-600 hover:bg-gray-50">LIBUR</button>
-                    </div>
+                <!-- Form Input -->
+                <form id="scheduleForm" class="space-y-4 bg-white p-4 rounded-xl border border-gray-200 shadow-sm relative">
+                    <h3 id="formSectionTitle" class="text-sm font-bold text-gray-700 border-b border-gray-100 pb-2">Tambah Petugas</h3>
                     
-                    <!-- Indikator Lokasi Tampil Terpisah -->
-                    <div id="locationIndicator" class="hidden mt-3 text-sm text-blue-800 bg-blue-50 border border-blue-200 p-2.5 rounded-lg flex items-center justify-between shadow-sm">
-                        <div class="flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-                            <span>Lokasi: <strong id="locText" class="font-bold"></strong></span>
-                        </div>
-                        <button type="button" onclick="changeLocation()" class="text-blue-600 hover:text-blue-800 underline font-medium px-2">Ubah</button>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Nama Petugas</label>
+                        <select 
+                            id="formNama"
+                            required
+                            class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                        >
+                            <option value="" disabled selected>Memuat data admin...</option>
+                        </select>
                     </div>
-                </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Keterangan (Opsional)</label>
-                    <textarea 
-                        id="formKeterangan"
-                        class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all resize-none"
-                        rows="2"
-                        placeholder="Catatan tambahan..."
-                    ></textarea>
-                </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Shift & Lokasi</label>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                            <button type="button" onclick="handleShiftClick('Pagi')" data-shift="Pagi" class="shift-btn py-2 rounded-lg border text-sm font-medium transition-all bg-blue-50 border-blue-500 text-blue-700 ring-1 ring-blue-500">Pagi</button>
+                            <button type="button" onclick="handleShiftClick('Siang')" data-shift="Siang" class="shift-btn py-2 rounded-lg border text-sm font-medium transition-all bg-white border-gray-200 text-gray-600 hover:bg-gray-50">Siang</button>
+                            <button type="button" onclick="handleShiftClick('Malam')" data-shift="Malam" class="shift-btn py-2 rounded-lg border text-sm font-medium transition-all bg-white border-gray-200 text-gray-600 hover:bg-gray-50">Malam</button>
+                            <button type="button" onclick="handleShiftClick('Piket')" data-shift="Piket" class="shift-btn py-2 rounded-lg border text-sm font-medium transition-all bg-white border-gray-200 text-gray-600 hover:bg-gray-50">Piket</button>
+                            <button type="button" onclick="handleShiftClick('Cuti/Izin')" data-shift="Cuti/Izin" class="shift-btn py-2 rounded-lg border text-sm font-medium transition-all bg-white border-gray-200 text-gray-600 hover:bg-gray-50">Cuti/Izin</button>
+                            <button type="button" onclick="handleShiftClick('LIBUR')" data-shift="LIBUR" class="shift-btn py-2 rounded-lg border text-sm font-medium transition-all bg-white border-gray-200 text-gray-600 hover:bg-gray-50">LIBUR</button>
+                        </div>
+                        
+                        <!-- Indikator Lokasi Tampil Terpisah -->
+                        <div id="locationIndicator" class="hidden mt-3 text-sm text-blue-800 bg-blue-50 border border-blue-200 p-2.5 rounded-lg flex items-center justify-between shadow-sm">
+                            <div class="flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                                <span>Lokasi: <strong id="locText" class="font-bold"></strong></span>
+                            </div>
+                            <button type="button" onclick="changeLocation()" class="text-blue-600 hover:text-blue-800 underline font-medium px-2">Ubah</button>
+                        </div>
+                    </div>
 
-                <div class="pt-4 flex gap-3">
-                    <button type="button" onclick="closeModal()" class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors">
-                        Batal
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Keterangan (Opsional)</label>
+                        <textarea 
+                            id="formKeterangan"
+                            class="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:bg-white outline-none transition-all resize-none"
+                            rows="2"
+                            placeholder="Catatan tambahan..."
+                        ></textarea>
+                    </div>
+
+                    <!-- Tombol Tambah Ke Daftar (Hanya muncul di mode Tambah) -->
+                    <button type="submit" id="btnAddTemp" class="w-full py-2 bg-blue-50 text-blue-700 font-bold rounded-lg border border-blue-200 hover:bg-blue-100 transition-colors flex items-center justify-center gap-2 mt-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg> Tambah ke Daftar
                     </button>
-                    <button type="submit" id="btnSubmit" class="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors flex justify-center items-center gap-2 disabled:opacity-70">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>
-                        Simpan Data
-                    </button>
-                </div>
-            </form>
+                </form>
+            </div>
+
+            <!-- Footer Modal -->
+            <div class="p-4 border-t border-gray-200 flex gap-3 bg-white flex-shrink-0">
+                <button type="button" onclick="closeModal()" class="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors">
+                    Batal
+                </button>
+                <button type="button" id="btnSubmitAll" onclick="saveAllToServer()" class="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors flex justify-center items-center gap-2 disabled:opacity-70">
+                    <svg id="btnSubmitIcon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>
+                    <span id="btnSubmitText">Simpan Data</span>
+                </button>
+            </div>
         </div>
     </div>
 
@@ -268,10 +290,11 @@
         // --- STATE ---
         let currentDate = new Date();
         let schedules = {}; 
+        let tempSchedules = []; // Penampung untuk Bulk Add
         let selectedDate = null;
         let currentShift = "Pagi"; // Default shift
         let currentLokasi = "Toko"; // Default lokasi
-        let pendingShift = null; // Menyimpan sementara shift saat pilih lokasi
+        let pendingShift = null; 
         let authAction = null; 
         let authTarget = null; 
         let editingTarget = null; 
@@ -290,7 +313,8 @@
         const formNama = document.getElementById('formNama');
         const formKeterangan = document.getElementById('formKeterangan');
         const gasUrlInput = document.getElementById('gasUrlInput');
-        const btnSubmit = document.getElementById('btnSubmit');
+        const btnSubmitAll = document.getElementById('btnSubmitAll');
+        const btnSubmitText = document.getElementById('btnSubmitText');
 
         // Elements Custom Modal
         const customAlertModal = document.getElementById('customAlertModal');
@@ -355,7 +379,7 @@
             authTarget = null;
         }
 
-        // FUNGSI TARIK DATA JADWAL (Mendukung kolom Lokasi)
+        // FUNGSI TARIK DATA JADWAL
         async function fetchSchedulesData() {
             const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ8ACyi03DJ77mANO19x_hJV82Xs8rNBBLyT9IIGc1tgYGNrv9WMufjm940iEPx4QU6Eta6T8Ekv2-X/pub?gid=1592468045&single=true&output=csv";
             
@@ -368,7 +392,7 @@
                 let hasLokasiColumn = false;
                 if (rows.length > 0) {
                     const header = rows[0].toLowerCase();
-                    hasLokasiColumn = header.includes('lokasi'); // Deteksi jika ada header lokasi
+                    hasLokasiColumn = header.includes('lokasi'); 
                     if (header.includes('timestamp')) {
                         rows.shift(); 
                     }
@@ -411,7 +435,6 @@
                         let lokasi = "";
                         let keterangan = "";
 
-                        // Membaca kolom ke-5 sebagai Lokasi jika header ada, jika tidak anggap itu Keterangan
                         if (hasLokasiColumn) {
                             lokasi = cols[4] ? cols[4].replace(/^"|"$/g, '') : "";
                             keterangan = cols[5] ? cols[5].replace(/^"|"$/g, '') : "";
@@ -517,9 +540,29 @@
             currentShift = baseShift;
             currentLokasi = loc;
 
+            // Handle Menu LIBUR
+            if (baseShift === 'LIBUR') {
+                formNama.disabled = true;
+                formNama.classList.add('bg-gray-200');
+                let opt = formNama.querySelector('option[value="TOKO TUTUP"]');
+                if (!opt) {
+                    opt = document.createElement('option');
+                    opt.value = "TOKO TUTUP";
+                    opt.textContent = "-- TOKO TUTUP --";
+                    formNama.appendChild(opt);
+                }
+                formNama.value = "TOKO TUTUP";
+            } else {
+                formNama.disabled = false;
+                formNama.classList.remove('bg-gray-200');
+                if (formNama.value === "TOKO TUTUP") formNama.value = "";
+                let opt = formNama.querySelector('option[value="TOKO TUTUP"]');
+                if (opt) opt.remove();
+            }
+
             document.querySelectorAll('.shift-btn').forEach(btn => {
                 const btnShift = btn.getAttribute('data-shift');
-                btn.innerText = btnShift; // Tetap murni "Pagi", "Siang", dll
+                btn.innerText = btnShift; 
                 
                 if (btnShift === baseShift) {
                     btn.className = "shift-btn py-2 rounded-lg border text-sm font-medium transition-all bg-blue-50 border-blue-500 text-blue-700 ring-1 ring-blue-500";
@@ -528,7 +571,6 @@
                 }
             });
 
-            // Tampilkan atau sembunyikan kotak indikator lokasi di bawah
             const locIndicator = document.getElementById('locationIndicator');
             const locText = document.getElementById('locText');
             
@@ -547,10 +589,18 @@
             selectedDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
             
             editingTarget = null; 
+            tempSchedules = [];
+            renderTempSchedules();
+
+            document.getElementById('tempScheduleSection').classList.remove('hidden');
+            document.getElementById('btnAddTemp').classList.remove('hidden');
+            document.getElementById('formSectionTitle').innerText = "Tambah Petugas";
+            btnSubmitText.innerText = "Simpan Semua Data";
+
             modalDateText.innerText = selectedDate;
             formNama.value = "";
             formKeterangan.value = "";
-            updateShiftUI("Pagi", "Toko"); // Default dengan lokasi
+            updateShiftUI("Pagi", "Toko"); 
             
             scheduleModal.classList.remove('hidden');
             scheduleModal.classList.add('flex');
@@ -569,6 +619,11 @@
                 oldLokasi: schedule.lokasi
             };
             
+            document.getElementById('tempScheduleSection').classList.add('hidden');
+            document.getElementById('btnAddTemp').classList.add('hidden');
+            document.getElementById('formSectionTitle').innerText = "Edit Petugas";
+            btnSubmitText.innerText = "Simpan Perubahan";
+
             selectedDate = dateStr;
             modalDateText.innerText = selectedDate + " (Edit)";
             formNama.value = schedule.nama;
@@ -584,6 +639,61 @@
             scheduleModal.classList.add('hidden');
             scheduleModal.classList.remove('flex');
             editingTarget = null;
+        }
+
+        // FUNGSI BULK ADD (MENGUMPULKAN DATA SEMENTARA)
+        document.getElementById('scheduleForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            if(editingTarget) return; // Jika mode edit, form disubmit manual di saveAllToServer
+
+            const nama = formNama.value.trim();
+            const keterangan = formKeterangan.value.trim();
+            
+            if (!nama || nama === "Memuat data admin...") return;
+
+            // Simpan ke array sementara
+            tempSchedules.push({
+                tanggal: selectedDate,
+                nama: nama,
+                shift: currentShift,
+                lokasi: currentLokasi,
+                keterangan: keterangan
+            });
+
+            renderTempSchedules();
+
+            // Reset form otomatis setelah klik Tambah
+            if (currentShift === 'LIBUR') {
+                formNama.value = "TOKO TUTUP";
+            } else {
+                formNama.value = "";
+            }
+            formKeterangan.value = "";
+        });
+
+        function renderTempSchedules() {
+            const container = document.getElementById('tempScheduleList');
+            if (tempSchedules.length === 0) {
+                container.innerHTML = `<div class="text-sm text-gray-400 italic">Belum ada data ditambahkan ke daftar.</div>`;
+                return;
+            }
+
+            container.innerHTML = tempSchedules.map((s, index) => `
+                <div class="flex justify-between items-center bg-blue-50 border border-blue-200 p-2 rounded-lg">
+                    <div class="flex flex-col text-sm">
+                        <span class="font-bold text-blue-800">${s.nama}</span>
+                        <span class="text-blue-600 text-xs">${s.shift} ${s.lokasi ? `(${s.lokasi})` : ''}</span>
+                    </div>
+                    <button type="button" onclick="removeTempSchedule(${index})" class="text-red-500 hover:bg-red-100 p-1.5 rounded transition-colors" title="Hapus dari daftar">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function removeTempSchedule(index) {
+            tempSchedules.splice(index, 1);
+            renderTempSchedules();
         }
 
         // FUNGSI KONFIRMASI OTORISASI
@@ -727,26 +837,29 @@
             calendarGrid.innerHTML = gridHTML;
         }
 
-        // --- FORM SUBMIT EVENT (TERPISAH SHIFT & LOKASI) ---
-        document.getElementById('scheduleForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
+        // --- FUNGSI MENGIRIM DATA (BULK / EDIT) ---
+        async function saveAllToServer() {
             const nama = formNama.value.trim();
             const keterangan = formKeterangan.value.trim();
-            if (!nama) return;
-
-            btnSubmit.disabled = true;
-            btnSubmit.innerHTML = `<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Menyimpan...`;
+            
+            btnSubmitAll.disabled = true;
+            btnSubmitText.innerText = "Menyimpan...";
 
             if (editingTarget) {
-                // ---- MODE EDIT DATA ----
+                // ---- MODE EDIT DATA (Satu per satu) ----
+                if(!nama || nama === "Memuat data admin...") {
+                    showCustomAlert("Silakan pilih Nama Petugas.");
+                    btnSubmitAll.disabled = false; btnSubmitText.innerText = "Simpan Perubahan";
+                    return;
+                }
+
                 const index = schedules[selectedDate].findIndex(s => s.id === editingTarget.id);
                 if (index !== -1) {
                     schedules[selectedDate][index] = {
                         id: editingTarget.id,
                         nama: nama,
-                        shift: currentShift, // Pagi, Siang, dll
-                        lokasi: currentLokasi, // Toko, Gudang, dll
+                        shift: currentShift, 
+                        lokasi: currentLokasi, 
                         keterangan: keterangan
                     };
                 }
@@ -764,59 +877,58 @@
                             newLokasi: currentLokasi,
                             newKeterangan: keterangan
                         };
-
                         await fetch(gasUrl, {
                             method: 'POST',
                             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                             body: JSON.stringify(payload)
                         });
                     } catch (error) {
-                        console.error("Gagal mengedit di Google Sheets:", error);
                         showCustomAlert("Perubahan tersimpan lokal, namun gagal terhubung ke Google Sheets.");
                     }
                 }
             } else {
-                // ---- MODE TAMBAH DATA (ADD) ----
-                const newSchedule = { 
-                    id: Date.now(), 
-                    nama: nama, 
-                    shift: currentShift, 
-                    lokasi: currentLokasi,
-                    keterangan: keterangan 
-                };
+                // ---- MODE TAMBAH BANYAK DATA (BULK ADD) ----
+                if (tempSchedules.length === 0) {
+                    // Coba masukkan yang ada di form saat ini jika pengguna lupa klik Tambah
+                    if (nama && nama !== "Memuat data admin..." && nama !== "") {
+                        document.getElementById('scheduleForm').dispatchEvent(new Event('submit'));
+                    } else {
+                        showCustomAlert("Tidak ada data petugas yang ditambahkan. Silakan isi form dan klik '+ Tambah ke Daftar'.");
+                        btnSubmitAll.disabled = false; btnSubmitText.innerText = "Simpan Semua Data";
+                        return;
+                    }
+                }
 
+                // Tambahkan semua di tempSchedules ke lokal
                 if (!schedules[selectedDate]) schedules[selectedDate] = [];
-                schedules[selectedDate].push(newSchedule);
+                tempSchedules.forEach(s => {
+                    s.id = Date.now() + Math.floor(Math.random() * 1000); // ID lokal
+                    schedules[selectedDate].push(s);
+                });
 
                 if (gasUrl) {
                     try {
                         const payload = {
-                            action: "add",
-                            tanggal: selectedDate,
-                            nama: nama,
-                            shift: currentShift,
-                            lokasi: currentLokasi,
-                            keterangan: keterangan
+                            action: "add_bulk",
+                            schedules: tempSchedules // Kirim seluruh array
                         };
-
                         await fetch(gasUrl, {
                             method: 'POST',
                             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                             body: JSON.stringify(payload)
                         });
                     } catch (error) {
-                        console.error("Gagal mengirim ke Google Sheets:", error);
                         showCustomAlert("Data tersimpan di kalender ini, namun gagal dikirim ke Google Sheets.");
                     }
                 }
             }
 
-            btnSubmit.disabled = false;
-            btnSubmit.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg> Simpan Data`;
+            btnSubmitAll.disabled = false;
+            btnSubmitText.innerText = editingTarget ? "Simpan Perubahan" : "Simpan Semua Data";
             
             closeModal();
             renderCalendar(); 
-        });
+        }
     </script>
 </body>
 </html>
