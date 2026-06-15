@@ -300,8 +300,9 @@
         let editingTarget = null; 
         
         // Default URL Web App
-        const defaultGasUrl = "https://script.google.com/macros/s/AKfycbyHj7QhrnZBlV64ikNICuwc0ccyUcSRakt45AF909CCJoXcKL6nZJ_8cK04rXh-OT4B/exec";
-        let gasUrl = localStorage.getItem('gas_url') || defaultGasUrl;
+        const defaultGasUrl = "https://script.google.com/macros/s/AKfycbyy06zNhbSsjkeMxHN6LCRFI6qXeRnO5gnCzV-rgMxvn0KGV_v7pLQFfCs_ZCmLDdkw/exec";
+        localStorage.setItem('gas_url', defaultGasUrl); // Memaksa browser menggunakan URL versi terbaru
+        let gasUrl = defaultGasUrl;
 
         // --- DOM ELEMENTS ---
         const monthYearDisplay = document.getElementById('monthYearDisplay');
