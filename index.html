@@ -62,7 +62,8 @@
                 <div class="flex-1">
                     <h3 class="text-lg font-semibold text-blue-900 mb-2">Integrasi Google Sheet</h3>
                     <p class="text-sm text-blue-800 mb-4">
-                        Agar data bisa tersimpan ke sheet <a href="https://docs.google.com/spreadsheets/d/1HSUiF20wpTJbfYdpOE08gtbRzm1N8IXOrZDs-KGSvnI" target="_blank" rel="noreferrer" class="underline font-bold">DataAbsen</a>, Anda perlu memasukkan URL dari Web App Google Apps Script.
+                        Pastikan Google Sheet Anda memiliki kolom berurutan: <br>
+                        <strong>Timestamp | Tanggal | Nama | Shift | Lokasi | Keterangan</strong>
                     </p>
                     <div class="flex flex-col gap-2">
                         <label class="text-sm font-medium text-blue-900">URL Web App (Google Apps Script):</label>
@@ -139,13 +140,23 @@
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Shift & Lokasi</label>
-                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Shift</label>
+                    <div class="grid grid-cols-3 gap-2">
                         <button type="button" onclick="handleShiftClick('Pagi')" data-shift="Pagi" class="shift-btn py-2 rounded-lg border text-sm font-medium transition-all bg-blue-50 border-blue-500 text-blue-700 ring-1 ring-blue-500">Pagi</button>
                         <button type="button" onclick="handleShiftClick('Siang')" data-shift="Siang" class="shift-btn py-2 rounded-lg border text-sm font-medium transition-all bg-white border-gray-200 text-gray-600 hover:bg-gray-50">Siang</button>
                         <button type="button" onclick="handleShiftClick('Malam')" data-shift="Malam" class="shift-btn py-2 rounded-lg border text-sm font-medium transition-all bg-white border-gray-200 text-gray-600 hover:bg-gray-50">Malam</button>
                         <button type="button" onclick="handleShiftClick('Piket')" data-shift="Piket" class="shift-btn py-2 rounded-lg border text-sm font-medium transition-all bg-white border-gray-200 text-gray-600 hover:bg-gray-50">Piket</button>
                         <button type="button" onclick="handleShiftClick('Cuti/Izin')" data-shift="Cuti/Izin" class="shift-btn py-2 rounded-lg border text-sm font-medium transition-all bg-white border-gray-200 text-gray-600 hover:bg-gray-50">Cuti/Izin</button>
+                        <button type="button" onclick="handleShiftClick('LIBUR')" data-shift="LIBUR" class="shift-btn py-2 rounded-lg border text-sm font-medium transition-all bg-white border-gray-200 text-gray-600 hover:bg-gray-50">LIBUR</button>
+                    </div>
+                    
+                    <!-- Indikator Lokasi Tampil Terpisah -->
+                    <div id="locationIndicator" class="hidden mt-3 text-sm text-blue-800 bg-blue-50 border border-blue-200 p-2.5 rounded-lg flex items-center justify-between shadow-sm">
+                        <div class="flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                            <span>Lokasi: <strong id="locText" class="font-bold"></strong></span>
+                        </div>
+                        <button type="button" onclick="changeLocation()" class="text-blue-600 hover:text-blue-800 underline font-medium px-2">Ubah</button>
                     </div>
                 </div>
 
@@ -258,11 +269,12 @@
         let currentDate = new Date();
         let schedules = {}; 
         let selectedDate = null;
-        let currentShift = "Pagi - Toko"; // Default shift
+        let currentShift = "Pagi"; // Default shift
+        let currentLokasi = "Toko"; // Default lokasi
         let pendingShift = null; // Menyimpan sementara shift saat pilih lokasi
-        let authAction = null; // Menyimpan aksi yang membutuhkan otorisasi (edit/delete)
-        let authTarget = null; // Menyimpan data target otorisasi
-        let editingTarget = null; // Menyimpan data yang sedang diedit
+        let authAction = null; 
+        let authTarget = null; 
+        let editingTarget = null; 
         
         // Default URL Web App
         const defaultGasUrl = "https://script.google.com/macros/s/AKfycbyHj7QhrnZBlV64ikNICuwc0ccyUcSRakt45AF909CCJoXcKL6nZJ_8cK04rXh-OT4B/exec";
@@ -305,9 +317,9 @@
             customAlertModal.classList.remove('flex');
         }
 
-        function openAuthModal(action, dateStr, id, nama, shift) {
+        function openAuthModal(action, dateStr, id, nama, shift, lokasi) {
             authAction = action;
-            authTarget = { dateStr, id, nama, shift };
+            authTarget = { dateStr, id, nama, shift, lokasi };
             
             const titleEl = document.getElementById('authModalTitle');
             const headerEl = document.getElementById('authModalHeader');
@@ -333,7 +345,6 @@
             customAuthModal.classList.remove('hidden');
             customAuthModal.classList.add('flex');
             
-            // Auto focus ke input password
             setTimeout(() => authPasswordInput.focus(), 100);
         }
 
@@ -344,7 +355,7 @@
             authTarget = null;
         }
 
-        // FUNGSI TARIK DATA JADWAL
+        // FUNGSI TARIK DATA JADWAL (Mendukung kolom Lokasi)
         async function fetchSchedulesData() {
             const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ8ACyi03DJ77mANO19x_hJV82Xs8rNBBLyT9IIGc1tgYGNrv9WMufjm940iEPx4QU6Eta6T8Ekv2-X/pub?gid=1592468045&single=true&output=csv";
             
@@ -354,8 +365,13 @@
                 
                 const rows = csvText.split(/\r?\n/).filter(row => row.trim().length > 0);
                 
-                if (rows.length > 0 && rows[0].toLowerCase().includes('timestamp')) {
-                    rows.shift(); 
+                let hasLokasiColumn = false;
+                if (rows.length > 0) {
+                    const header = rows[0].toLowerCase();
+                    hasLokasiColumn = header.includes('lokasi'); // Deteksi jika ada header lokasi
+                    if (header.includes('timestamp')) {
+                        rows.shift(); 
+                    }
                 }
 
                 schedules = {}; 
@@ -391,7 +407,18 @@
 
                         const nama = cols[2];
                         const shift = cols[3];
-                        const keterangan = cols[4] ? cols[4].replace(/^"|"$/g, '') : "";
+                        
+                        let lokasi = "";
+                        let keterangan = "";
+
+                        // Membaca kolom ke-5 sebagai Lokasi jika header ada, jika tidak anggap itu Keterangan
+                        if (hasLokasiColumn) {
+                            lokasi = cols[4] ? cols[4].replace(/^"|"$/g, '') : "";
+                            keterangan = cols[5] ? cols[5].replace(/^"|"$/g, '') : "";
+                        } else {
+                            lokasi = "";
+                            keterangan = cols[4] ? cols[4].replace(/^"|"$/g, '') : "";
+                        }
 
                         if (!schedules[tanggal]) schedules[tanggal] = [];
                         
@@ -399,6 +426,7 @@
                             id: Date.now() + index, 
                             nama: nama,
                             shift: shift,
+                            lokasi: lokasi,
                             keterangan: keterangan
                         });
                     }
@@ -460,7 +488,7 @@
                 locationModal.classList.remove('hidden');
                 locationModal.classList.add('flex');
             } else {
-                setShift(shift, ''); // Cuti/Izin tanpa lokasi
+                updateShiftUI(shift, ""); // Cuti/Izin atau LIBUR tidak pakai lokasi
             }
         }
 
@@ -472,17 +500,26 @@
 
         function selectLocation(loc) {
             if (pendingShift) {
-                setShift(pendingShift, loc);
+                updateShiftUI(pendingShift, loc);
             }
             closeLocationModal();
         }
 
-        function setShift(baseShift, loc) {
-            currentShift = loc ? `${baseShift} - ${loc}` : baseShift;
-            
+        function changeLocation() {
+            if (currentShift && ['Pagi', 'Siang', 'Malam', 'Piket'].includes(currentShift)) {
+                pendingShift = currentShift;
+                locationModal.classList.remove('hidden');
+                locationModal.classList.add('flex');
+            }
+        }
+
+        function updateShiftUI(baseShift, loc) {
+            currentShift = baseShift;
+            currentLokasi = loc;
+
             document.querySelectorAll('.shift-btn').forEach(btn => {
                 const btnShift = btn.getAttribute('data-shift');
-                btn.innerText = btnShift; // Mengembalikan text ke default (Pagi, Siang, dll)
+                btn.innerText = btnShift; // Tetap murni "Pagi", "Siang", dll
                 
                 if (btnShift === baseShift) {
                     btn.className = "shift-btn py-2 rounded-lg border text-sm font-medium transition-all bg-blue-50 border-blue-500 text-blue-700 ring-1 ring-blue-500";
@@ -490,6 +527,17 @@
                     btn.className = "shift-btn py-2 rounded-lg border text-sm font-medium transition-all bg-white border-gray-200 text-gray-600 hover:bg-gray-50";
                 }
             });
+
+            // Tampilkan atau sembunyikan kotak indikator lokasi di bawah
+            const locIndicator = document.getElementById('locationIndicator');
+            const locText = document.getElementById('locText');
+            
+            if (loc) {
+                locText.innerText = loc;
+                locIndicator.classList.remove('hidden');
+            } else {
+                locIndicator.classList.add('hidden');
+            }
         }
 
         // FUNGSI MEMBUKA MODAL TAMBAH DATA BARU
@@ -498,11 +546,11 @@
             const month = currentDate.getMonth() + 1;
             selectedDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
             
-            editingTarget = null; // Menandakan bahwa ini tambah data (bukan edit)
+            editingTarget = null; 
             modalDateText.innerText = selectedDate;
             formNama.value = "";
             formKeterangan.value = "";
-            setShift("Pagi", "Toko"); // Default dengan lokasi
+            updateShiftUI("Pagi", "Toko"); // Default dengan lokasi
             
             scheduleModal.classList.remove('hidden');
             scheduleModal.classList.add('flex');
@@ -517,7 +565,8 @@
                 dateStr: dateStr, 
                 id: id, 
                 oldNama: schedule.nama, 
-                oldShift: schedule.shift 
+                oldShift: schedule.shift,
+                oldLokasi: schedule.lokasi
             };
             
             selectedDate = dateStr;
@@ -525,16 +574,7 @@
             formNama.value = schedule.nama;
             formKeterangan.value = schedule.keterangan || "";
             
-            // Menguraikan lokasi yang tersimpan
-            let shiftStr = schedule.shift;
-            let base = shiftStr;
-            let loc = "";
-            if (shiftStr.includes(' - ')) {
-                const parts = shiftStr.split(' - ');
-                base = parts[0];
-                loc = parts[1];
-            }
-            setShift(base, loc);
+            updateShiftUI(schedule.shift, schedule.lokasi || "");
 
             scheduleModal.classList.remove('hidden');
             scheduleModal.classList.add('flex');
@@ -546,7 +586,7 @@
             editingTarget = null;
         }
 
-        // FUNGSI KONFIRMASI OTORISASI (MENGGANTIKAN NATIVE PROMPT)
+        // FUNGSI KONFIRMASI OTORISASI
         async function confirmAuth() {
             if (!authTarget || !authAction) return;
 
@@ -557,9 +597,9 @@
                 return;
             }
 
-            const { dateStr, id, nama, shift } = authTarget;
+            const { dateStr, id, nama, shift, lokasi } = authTarget;
             const currentAction = authAction;
-            closeAuthModal(); // Tutup modal password
+            closeAuthModal(); 
 
             if (currentAction === 'edit') {
                 openEditModal(dateStr, id);
@@ -577,7 +617,8 @@
                             action: "delete",
                             tanggal: dateStr,
                             nama: nama,
-                            shift: shift
+                            shift: shift,
+                            lokasi: lokasi
                         };
 
                         await fetch(gasUrl, {
@@ -616,7 +657,7 @@
                 const dayHolidays = HOLIDAYS[dateStr] || [];
                 let daySchedules = schedules[dateStr] || [];
                 
-                // Sort/Filter berdasarkan admin yang dipilih
+                // Sort/Filter berdasarkan admin
                 if (filterVal !== "All") {
                     daySchedules = daySchedules.filter(s => s.nama === filterVal);
                 }
@@ -632,32 +673,32 @@
                     }">${holiday.name}</div>
                 `).join('');
 
-                // Tombol Edit dan Hapus
+                // Render Jadwal di kotak Kalender
                 let schedulesHTML = daySchedules.map(schedule => {
                     let dotColor = 'bg-gray-400';
-                    if (schedule.shift.startsWith('Pagi')) dotColor = 'bg-orange-400';
-                    else if (schedule.shift.startsWith('Siang')) dotColor = 'bg-yellow-400';
-                    else if (schedule.shift.startsWith('Malam')) dotColor = 'bg-indigo-400';
-                    else if (schedule.shift.startsWith('Piket')) dotColor = 'bg-green-500';
-                    else if (schedule.shift.startsWith('Cuti/Izin')) dotColor = 'bg-red-500';
+                    if (schedule.shift === 'Pagi') dotColor = 'bg-orange-400';
+                    else if (schedule.shift === 'Siang') dotColor = 'bg-yellow-400';
+                    else if (schedule.shift === 'Malam') dotColor = 'bg-indigo-400';
+                    else if (schedule.shift === 'Piket') dotColor = 'bg-green-500';
+                    else if (schedule.shift === 'Cuti/Izin') dotColor = 'bg-red-500';
+                    else if (schedule.shift === 'LIBUR') dotColor = 'bg-gray-800';
 
                     let ketHTML = schedule.keterangan ? `<div class="text-[10px] text-gray-500 mt-1 italic leading-tight break-words border-t border-blue-100 pt-1">${schedule.keterangan}</div>` : '';
+                    let locBadge = schedule.lokasi ? `<span class="px-1.5 py-0.5 bg-white rounded border border-gray-200 text-gray-500 text-[9px] shadow-sm ml-1">${schedule.lokasi}</span>` : '';
 
                     return `
                     <div class="text-xs p-1.5 rounded bg-blue-50 border border-blue-100 flex flex-col mt-1 relative group">
                         <span class="font-semibold text-blue-800 pr-12">${schedule.nama}</span>
-                        <span class="text-blue-600 flex items-center gap-1">
-                            <span class="w-2 h-2 rounded-full ${dotColor}"></span>
-                            ${schedule.shift}
-                        </span>
+                        <div class="text-blue-600 flex items-center mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis">
+                            <span class="w-2 h-2 rounded-full ${dotColor} mr-1 flex-shrink-0"></span>
+                            ${schedule.shift} ${locBadge}
+                        </div>
                         ${ketHTML}
                         <div class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 flex gap-1 transition-opacity">
-                            <!-- Tombol Edit -->
-                            <button onclick="event.stopPropagation(); openAuthModal('edit', '${dateStr}', ${schedule.id}, '${schedule.nama}', '${schedule.shift}')" class="text-blue-500 hover:bg-blue-100 bg-white rounded p-1 shadow-sm" title="Edit Jadwal">
+                            <button onclick="event.stopPropagation(); openAuthModal('edit', '${dateStr}', ${schedule.id}, '${schedule.nama}', '${schedule.shift}', '${schedule.lokasi}')" class="text-blue-500 hover:bg-blue-100 bg-white rounded p-1 shadow-sm" title="Edit Jadwal">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
                             </button>
-                            <!-- Tombol Hapus -->
-                            <button onclick="event.stopPropagation(); openAuthModal('delete', '${dateStr}', ${schedule.id}, '${schedule.nama}', '${schedule.shift}')" class="text-red-500 hover:bg-red-100 bg-white rounded p-1 shadow-sm" title="Hapus Jadwal">
+                            <button onclick="event.stopPropagation(); openAuthModal('delete', '${dateStr}', ${schedule.id}, '${schedule.nama}', '${schedule.shift}', '${schedule.lokasi}')" class="text-red-500 hover:bg-red-100 bg-white rounded p-1 shadow-sm" title="Hapus Jadwal">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
                             </button>
                         </div>
@@ -686,7 +727,7 @@
             calendarGrid.innerHTML = gridHTML;
         }
 
-        // --- FORM SUBMIT EVENT (TAMBAH DATA ATAU EDIT DATA) ---
+        // --- FORM SUBMIT EVENT (TERPISAH SHIFT & LOKASI) ---
         document.getElementById('scheduleForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -699,18 +740,17 @@
 
             if (editingTarget) {
                 // ---- MODE EDIT DATA ----
-                // 1. Update data secara lokal di layar
                 const index = schedules[selectedDate].findIndex(s => s.id === editingTarget.id);
                 if (index !== -1) {
                     schedules[selectedDate][index] = {
                         id: editingTarget.id,
                         nama: nama,
-                        shift: currentShift,
+                        shift: currentShift, // Pagi, Siang, dll
+                        lokasi: currentLokasi, // Toko, Gudang, dll
                         keterangan: keterangan
                     };
                 }
 
-                // 2. Kirim payload EDIT ke Google Sheets
                 if (gasUrl) {
                     try {
                         const payload = {
@@ -718,8 +758,10 @@
                             tanggal: selectedDate,
                             oldNama: editingTarget.oldNama,
                             oldShift: editingTarget.oldShift,
+                            oldLokasi: editingTarget.oldLokasi,
                             newNama: nama,
                             newShift: currentShift,
+                            newLokasi: currentLokasi,
                             newKeterangan: keterangan
                         };
 
@@ -739,6 +781,7 @@
                     id: Date.now(), 
                     nama: nama, 
                     shift: currentShift, 
+                    lokasi: currentLokasi,
                     keterangan: keterangan 
                 };
 
@@ -752,6 +795,7 @@
                             tanggal: selectedDate,
                             nama: nama,
                             shift: currentShift,
+                            lokasi: currentLokasi,
                             keterangan: keterangan
                         };
 
@@ -767,7 +811,6 @@
                 }
             }
 
-            // Kembalikan status tombol ke awal
             btnSubmit.disabled = false;
             btnSubmit.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg> Simpan Data`;
             
