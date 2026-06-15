@@ -650,7 +650,9 @@
             e.preventDefault();
             if(editingTarget) return; // Jika mode edit, form disubmit manual di saveAllToServer
 
-            const nama = formNama.value.trim();
+            let nama = formNama.value ? formNama.value.trim() : "";
+            if (currentShift === 'LIBUR') nama = "TOKO TUTUP"; // Pastikan text terbaca
+
             const keterangan = formKeterangan.value.trim();
             
             if (!nama || nama === "Memuat data admin...") return;
@@ -843,7 +845,9 @@
 
         // --- FUNGSI MENGIRIM DATA (BULK / EDIT) ---
         async function saveAllToServer() {
-            const nama = formNama.value.trim();
+            let finalNama = formNama.value ? formNama.value.trim() : "";
+            if (currentShift === 'LIBUR') finalNama = "TOKO TUTUP"; // Pastikan text terbaca
+
             const keterangan = formKeterangan.value.trim();
             
             btnSubmitAll.disabled = true;
@@ -851,7 +855,7 @@
 
             if (editingTarget) {
                 // ---- MODE EDIT DATA (Satu per satu) ----
-                if(!nama || nama === "Memuat data admin...") {
+                if(!finalNama || finalNama === "Memuat data admin...") {
                     showCustomAlert("Silakan pilih Nama Petugas.");
                     btnSubmitAll.disabled = false; btnSubmitText.innerText = "Simpan Perubahan";
                     return;
@@ -861,7 +865,7 @@
                 if (index !== -1) {
                     schedules[selectedDate][index] = {
                         id: editingTarget.id,
-                        nama: nama,
+                        nama: finalNama,
                         shift: currentShift, 
                         lokasi: currentLokasi, 
                         keterangan: keterangan
@@ -876,7 +880,7 @@
                             oldNama: editingTarget.oldNama,
                             oldShift: editingTarget.oldShift,
                             oldLokasi: editingTarget.oldLokasi,
-                            newNama: nama,
+                            newNama: finalNama,
                             newShift: currentShift,
                             newLokasi: currentLokasi,
                             newKeterangan: keterangan
@@ -894,14 +898,18 @@
                 // ---- MODE TAMBAH BANYAK DATA (BULK ADD) ----
                 
                 // Mendorong input terakhir (atau LIBUR) jika belum ditambahkan ke daftar list.
-                if (nama && nama !== "Memuat data admin...") {
-                    tempSchedules.push({
-                        tanggal: selectedDate,
-                        nama: nama,
-                        shift: currentShift,
-                        lokasi: currentLokasi,
-                        keterangan: keterangan
-                    });
+                if (finalNama && finalNama !== "Memuat data admin...") {
+                    // Pastikan tidak duplikat dengan yang ada di tempSchedules
+                    const isDuplicate = tempSchedules.some(s => s.nama === finalNama && s.shift === currentShift && s.lokasi === currentLokasi);
+                    if (!isDuplicate) {
+                        tempSchedules.push({
+                            tanggal: selectedDate,
+                            nama: finalNama,
+                            shift: currentShift,
+                            lokasi: currentLokasi,
+                            keterangan: keterangan
+                        });
+                    }
                 }
                 
                 // Jika masih kosong (belum diisi apapun)
@@ -920,15 +928,25 @@
 
                 if (gasUrl) {
                     try {
-                        const payload = {
-                            action: "add_bulk",
-                            schedules: tempSchedules // Kirim seluruh array
-                        };
-                        await fetch(gasUrl, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                            body: JSON.stringify(payload)
+                        // Menggunakan Promise.all untuk mengirim permintaan action: "add" satu per satu
+                        // Ini memastikan aplikasi berjalan sempurna meski Google Apps Script belum diperbarui ke versi add_bulk
+                        const promises = tempSchedules.map(schedule => {
+                            const payload = {
+                                action: "add",
+                                tanggal: schedule.tanggal,
+                                nama: schedule.nama,
+                                shift: schedule.shift,
+                                lokasi: schedule.lokasi,
+                                keterangan: schedule.keterangan
+                            };
+                            return fetch(gasUrl, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                                body: JSON.stringify(payload)
+                            });
                         });
+
+                        await Promise.all(promises);
                     } catch (error) {
                         showCustomAlert("Data tersimpan di kalender ini, namun gagal dikirim ke Google Sheets.");
                     }
